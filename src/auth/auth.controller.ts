@@ -9,6 +9,6 @@ export class AuthController {
 
   @Post('login')
   login(@Body() body: LoginDto, @Req() req: Request) {
-    return this.authService.login(body.email, req['tenantId'] ?? null);
+    return this.authService.login(body.email, req.tenantId ?? null);
   }
 }

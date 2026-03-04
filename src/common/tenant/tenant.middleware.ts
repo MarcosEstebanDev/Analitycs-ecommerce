@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 export class TenantMiddleware implements NestMiddleware {
   use(req: Request, _res: Response, next: NextFunction) {
     const tenantId = req.header('x-tenant-id') ?? null;
-    req['tenantId'] = tenantId;
+    req.tenantId = tenantId;
     next();
   }
 }
