@@ -24,16 +24,7 @@ No es solo un dashboard. Es un sistema que:
 - E-commerce DTC.
 - Agencias que gestionan múltiples tiendas.
 
-### 2.2 Pricing
-
-Freemium + escalado por volumen de pedidos:
-
-- **Free:** hasta 200 pedidos/mes.
-- **Growth:** USD 59 (hasta 2.000 pedidos).
-- **Scale:** USD 149 (hasta 10.000 pedidos).
-- **Pro:** USD 399 (ilimitado + predicción avanzada).
-
-### 2.3 Métricas Clave
+### 2.2 Métricas Clave
 
 - MRR.
 - ARPU.
