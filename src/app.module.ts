@@ -6,6 +6,7 @@ import { ConnectorModule } from './connector/connector.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './database/database.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     ConnectorModule,
     HealthModule,
     AnalyticsModule,
+    JobsModule,
   ]
 })
 export class AppModule implements NestModule {
