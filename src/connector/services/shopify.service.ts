@@ -1,8 +1,9 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { OrderService, CustomerService, StoreService, InsightService } from '../../database/services';
-import { OrderStatus, InsightType, InsightSeverity } from '../../database/entities';
+import { OrderService, CustomerService, StoreService, InsightService, TenantService } from '../../database/services';
+import { OrderStatus, InsightType, InsightSeverity, StoreProvider } from '../../database/entities';
+import { getMonthlyOrderLimit } from '../../tenant/plan-limits';
 import { ShopifyOrderPayload } from '../dto/shopify-order.dto';
 
 @Injectable()
@@ -16,8 +17,54 @@ export class ShopifyService {
     private readonly customerService: CustomerService,
     private readonly storeService: StoreService,
     private readonly insightService: InsightService,
+    private readonly tenantService: TenantService,
   ) {
     this.apiSecret = this.configService.get('SHOPIFY_API_SECRET', '');
+  }
+
+  /**
+   * Register or update a Shopify store for a tenant (onboarding helper)
+   */
+  async connectStore(
+    tenantId: string,
+    shopDomain: string,
+    accessToken: string,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('Missing tenantId');
+    }
+    if (!shopDomain) {
+      throw new BadRequestException('Missing shop domain');
+    }
+    if (!accessToken) {
+      throw new BadRequestException('Missing access token');
+    }
+
+    const name = shopDomain.replace(/\.myshopify\.com$/i, '');
+
+    const existing = await this.storeService.findByExternalId(
+      tenantId,
+      shopDomain,
+      StoreProvider.SHOPIFY,
+    );
+
+    if (existing) {
+      const updated = await this.storeService.update(existing.id, {
+        accessToken,
+        isActive: true,
+      });
+      return updated;
+    }
+
+    const store = await this.storeService.create(
+      tenantId,
+      StoreProvider.SHOPIFY,
+      name,
+      shopDomain,
+      accessToken,
+    );
+
+    return store;
   }
 
   /**
@@ -51,6 +98,20 @@ export class ShopifyService {
     payload: ShopifyOrderPayload,
   ): Promise<void> {
     try {
+      const tenant = await this.tenantService.findById(tenantId);
+      if (!tenant) {
+        throw new BadRequestException('Tenant not found');
+      }
+
+      const monthlyLimit = getMonthlyOrderLimit(tenant.plan);
+      if (monthlyLimit !== null) {
+        const currentCount = await this.orderService.countOrdersForTenantInMonth(tenantId);
+        if (currentCount >= monthlyLimit) {
+          this.logger.warn(`Tenant ${tenantId} exceeded monthly order limit for plan ${tenant.plan}`);
+          throw new BadRequestException('Monthly order limit exceeded for current plan. Please upgrade your plan to continue syncing orders.');
+        }
+      }
+
       const externalOrderId = String(payload.id);
       
       // Check if order already exists

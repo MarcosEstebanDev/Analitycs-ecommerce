@@ -9,6 +9,36 @@ export class ShopifyController {
 
   constructor(private readonly shopifyService: ShopifyService) {}
 
+  /**
+   * Onboard a Shopify store for the current tenant.
+   * Expected body: { shopDomain: string, accessToken: string }
+   * Uses x-tenant-id header for tenant context.
+   */
+  @Post('connect-store')
+  async connectStore(
+    @Body('shopDomain') shopDomain: string,
+    @Body('accessToken') accessToken: string,
+    @Req() req: Request,
+  ) {
+    const tenantId = req.tenantId;
+
+    if (!tenantId) {
+      throw new BadRequestException('Missing tenant context (x-tenant-id header)');
+    }
+
+    try {
+      const store = await this.shopifyService.connectStore(tenantId, shopDomain, accessToken);
+      return {
+        success: true,
+        data: store,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error connecting Shopify store: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
   @Post('webhook/orders-created')
   @HttpCode(202)
   async handleOrdersCreated(

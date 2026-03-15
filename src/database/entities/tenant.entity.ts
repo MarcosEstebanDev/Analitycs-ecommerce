@@ -19,6 +19,21 @@ export class Tenant {
   @Column({ type: 'varchar', enum: TenantPlan, default: TenantPlan.FREE })
   plan!: TenantPlan;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  billingEmail?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeCustomerId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeSubscriptionId?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  subscriptionStatus?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  trialEndsAt?: Date;
+
   @Column({ type: 'varchar', length: 255, unique: true })
   slug!: string;
 

@@ -99,6 +99,21 @@ export class OrderService {
       .getMany();
   }
 
+  async countOrdersForTenantInMonth(
+    tenantId: string,
+    date: Date = new Date(),
+  ): Promise<number> {
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const startOfNextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+
+    return this.orderRepository
+      .createQueryBuilder('order')
+      .where('order.tenantId = :tenantId', { tenantId })
+      .andWhere('order.createdAt >= :startOfMonth', { startOfMonth })
+      .andWhere('order.createdAt < :startOfNextMonth', { startOfNextMonth })
+      .getCount();
+  }
+
   async delete(id: string): Promise<void> {
     await this.orderRepository.delete(id);
   }

@@ -7,12 +7,16 @@ import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './database/database.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { JobsModule } from './jobs/jobs.module';
+import { TenantModule } from './tenant/tenant.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     AuthModule,
+    TenantModule,
+    BillingModule,
     ConnectorModule,
     HealthModule,
     AnalyticsModule,
