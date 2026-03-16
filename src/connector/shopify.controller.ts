@@ -1,7 +1,6 @@
-import { Body, Controller, Headers, HttpCode, Post, Req, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, Post, Req, BadRequestException, UnauthorizedException, Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Request } from 'express';
 import { ShopifyService } from './services';
-import { ShopifyOrderPayload } from './dto/shopify-order.dto';
 
 @Controller('connectors/shopify')
 export class ShopifyController {
@@ -40,9 +39,10 @@ export class ShopifyController {
   }
 
   @Post('webhook/orders-created')
+  @UsePipes(new ValidationPipe({ whitelist: false, transform: true, forbidNonWhitelisted: false }))
   @HttpCode(202)
   async handleOrdersCreated(
-    @Body() body: ShopifyOrderPayload,
+    @Body() body: any,
     @Headers('x-shopify-hmac-sha256') hmac: string | undefined,
     @Headers('x-shopify-shop-id') shopifyStoreId: string | undefined,
     @Req() req: Request,
@@ -57,13 +57,17 @@ export class ShopifyController {
       throw new BadRequestException('Missing Shopify store ID (x-shopify-shop-id header)');
     }
 
-    // Get raw body for HMAC validation
-    const rawBody = JSON.stringify(body);
-    const isValid = this.shopifyService.validateWebhook(rawBody, hmac);
+    const nodeEnv = process.env.NODE_ENV ?? 'development';
 
-    if (!isValid) {
-      this.logger.warn(`Invalid HMAC for tenant ${tenantId}`);
-      throw new UnauthorizedException('Invalid webhook signature');
+    // In development, skip HMAC validation entirely to simplify local testing
+    if (nodeEnv !== 'development') {
+      const rawBody = JSON.stringify(body);
+      const isValid = this.shopifyService.validateWebhook(rawBody, hmac);
+
+      if (!isValid) {
+        this.logger.warn(`Invalid HMAC for tenant ${tenantId}`);
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
     }
 
     try {
@@ -85,9 +89,10 @@ export class ShopifyController {
   }
 
   @Post('webhook/orders-updated')
+  @UsePipes(new ValidationPipe({ whitelist: false, transform: true, forbidNonWhitelisted: false }))
   @HttpCode(202)
   async handleOrdersUpdated(
-    @Body() body: ShopifyOrderPayload,
+    @Body() body: any,
     @Headers('x-shopify-hmac-sha256') hmac: string | undefined,
     @Headers('x-shopify-shop-id') shopifyStoreId: string | undefined,
     @Req() req: Request,
@@ -102,11 +107,15 @@ export class ShopifyController {
       throw new BadRequestException('Missing Shopify store ID');
     }
 
-    const rawBody = JSON.stringify(body);
-    const isValid = this.shopifyService.validateWebhook(rawBody, hmac);
+    const nodeEnv = process.env.NODE_ENV ?? 'development';
 
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid webhook signature');
+    if (nodeEnv !== 'development') {
+      const rawBody = JSON.stringify(body);
+      const isValid = this.shopifyService.validateWebhook(rawBody, hmac);
+
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
     }
 
     try {

@@ -71,6 +71,14 @@ export class ShopifyService {
    * Validates HMAC signature from Shopify webhook
    */
   validateWebhook(body: string, hmacHeader: string | undefined): boolean {
+    const nodeEnv = this.configService.get('NODE_ENV', 'development');
+
+    // In development we skip HMAC validation to simplify local testing
+    if (nodeEnv === 'development') {
+      this.logger.warn('Skipping Shopify webhook HMAC validation in development environment');
+      return true;
+    }
+
     if (!hmacHeader) {
       this.logger.warn('No HMAC header provided');
       return false;
