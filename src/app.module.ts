@@ -9,6 +9,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { JobsModule } from './jobs/jobs.module';
 import { TenantModule } from './tenant/tenant.module';
 import { BillingModule } from './billing/billing.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { BillingModule } from './billing/billing.module';
     HealthModule,
     AnalyticsModule,
     JobsModule,
+    UsersModule,
   ]
 })
 export class AppModule implements NestModule {
@@ -28,3 +30,4 @@ export class AppModule implements NestModule {
     consumer.apply(TenantMiddleware).forRoutes('*');
   }
 }
+

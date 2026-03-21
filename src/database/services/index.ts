@@ -3,3 +3,4 @@ export { StoreService } from './store.service';
 export { OrderService } from './order.service';
 export { CustomerService } from './customer.service';
 export { InsightService } from './insight.service';
+export { UserService } from './user.service';

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { Tenant, Store, Order, OrderItem, Customer, Insight } from './entities';
-import { TenantService, StoreService, OrderService, CustomerService, InsightService } from './services';
+import { Tenant, Store, Order, OrderItem, Customer, Insight, User } from './entities';
+import { TenantService, StoreService, OrderService, CustomerService, InsightService, UserService } from './services';
 
 @Module({
   imports: [
@@ -18,16 +18,16 @@ import { TenantService, StoreService, OrderService, CustomerService, InsightServ
           username: configService.get('DB_USER', 'analytics_user'),
           password: configService.get('DB_PASSWORD', 'analytics_password'),
           database: configService.get('DB_NAME', 'analytics_db'),
-          entities: [Tenant, Store, Order, OrderItem, Customer, Insight],
+          entities: [Tenant, Store, Order, OrderItem, Customer, Insight, User],
           synchronize: nodeEnv === 'development',
           // Log only queries and errors in development, and only errors in other envs
           logging: nodeEnv === 'development' ? ['query', 'error'] : ['error'],
         };
       },
     }),
-    TypeOrmModule.forFeature([Tenant, Store, Order, OrderItem, Customer, Insight]),
+    TypeOrmModule.forFeature([Tenant, Store, Order, OrderItem, Customer, Insight, User]),
   ],
-  providers: [TenantService, StoreService, OrderService, CustomerService, InsightService],
-  exports: [TenantService, StoreService, OrderService, CustomerService, InsightService, TypeOrmModule],
+  providers: [TenantService, StoreService, OrderService, CustomerService, InsightService, UserService],
+  exports: [TenantService, StoreService, OrderService, CustomerService, InsightService, UserService, TypeOrmModule],
 })
 export class DatabaseModule {}
