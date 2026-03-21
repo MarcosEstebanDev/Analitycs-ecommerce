@@ -1,4 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { TenantMiddleware } from './common/tenant/tenant.middleware';
@@ -14,6 +16,10 @@ import { UsersModule } from './users/users.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 60000, limit: 10 },   // 10 req/min (auth endpoints)
+      { name: 'long',  ttl: 60000, limit: 150 },  // 150 req/min (API endpoints)
+    ]),
     DatabaseModule,
     AuthModule,
     TenantModule,
@@ -30,4 +36,3 @@ export class AppModule implements NestModule {
     consumer.apply(TenantMiddleware).forRoutes('*');
   }
 }
-

@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Param, Query, Req, BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { DataSource } from 'typeorm';
 import { AnalyticsService, AnomalyDetectionService, AlertService } from '../services';
 import { InsightService, StoreService } from '../../database/services';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -15,6 +16,7 @@ export class DashboardController {
     private readonly alertService: AlertService,
     private readonly insightService: InsightService,
     private readonly storeService: StoreService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -297,6 +299,45 @@ export class DashboardController {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error actioning insight: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Get top 10 products by revenue
+   */
+  @Get('top-products')
+  async getTopProducts(@Req() req: Request) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const products = await this.dataSource.query(
+        `SELECT oi."productName" AS title,
+                SUM(oi.quantity)::int AS "totalQty",
+                SUM(oi."lineTotal")::numeric AS revenue
+         FROM order_items oi
+         JOIN orders o ON o.id = oi."orderId"
+         WHERE o."tenantId" = $1
+         GROUP BY oi."productName"
+         ORDER BY revenue DESC
+         LIMIT 10`,
+        [tenantId],
+      );
+
+      return {
+        success: true,
+        data: {
+          products: products.map((p: any) => ({
+            title: p.title,
+            totalQty: Number(p.totalQty),
+            revenue: Number(p.revenue),
+          })),
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error fetching top products: ${message}`);
       return { success: false, error: message };
     }
   }
