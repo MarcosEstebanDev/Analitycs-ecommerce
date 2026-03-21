@@ -304,6 +304,93 @@ export class DashboardController {
   }
 
   /**
+   * Get connector/store status with sync details
+   */
+  @Get('connectors')
+  async getConnectors(@Req() req: Request) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const stores = await this.storeService.findByTenantId(tenantId);
+
+      // Enrich each store with order counts per time window
+      const enriched = await Promise.all(
+        stores.map(async (store) => {
+          const [row] = await this.dataSource.query(
+            `SELECT
+               COUNT(*)::int              AS "totalOrders",
+               MAX(o."createdAt")         AS "lastOrderAt"
+             FROM orders o
+             WHERE o."storeId" = $1`,
+            [store.id],
+          );
+          const lastSync = store.lastSyncedAt ?? store.updatedAt;
+          const minutesSinceSync = lastSync
+            ? Math.floor((Date.now() - new Date(lastSync).getTime()) / 60000)
+            : null;
+
+          return {
+            id:               store.id,
+            name:             store.name,
+            provider:         store.provider,
+            isActive:         store.isActive,
+            externalId:       store.externalId,
+            lastSyncedAt:     store.lastSyncedAt ?? null,
+            totalOrdersSync:  Number(store.totalOrdersSync ?? 0),
+            totalOrders:      row?.totalOrders ?? 0,
+            lastOrderAt:      row?.lastOrderAt ?? null,
+            minutesSinceSync: minutesSinceSync,
+            status:           !store.isActive
+              ? 'disconnected'
+              : minutesSinceSync === null || minutesSinceSync > 120
+              ? 'stale'
+              : 'synced',
+            createdAt:        store.createdAt,
+          };
+        }),
+      );
+
+      return { success: true, data: enriched };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error fetching connectors: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Toggle store active/inactive
+   */
+  @Post('connectors/:storeId/toggle')
+  async toggleConnector(
+    @Req() req: Request,
+    @Param('storeId') storeId: string,
+  ) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const stores = await this.storeService.findByTenantId(tenantId);
+      const store = stores.find((s) => s.id === storeId);
+      if (!store) throw new BadRequestException('Store not found');
+
+      await this.dataSource.query(
+        `UPDATE stores SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE id = $1 AND "tenantId" = $2`,
+        [storeId, tenantId],
+      );
+
+      return {
+        success: true,
+        message: `Store ${store.name} toggled to ${!store.isActive ? 'active' : 'inactive'}`,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
    * Get top 10 products by revenue
    */
   @Get('top-products')

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Tenant, Store, Order, OrderItem, Customer, Insight, User } from './entities';
 import { TenantService, StoreService, OrderService, CustomerService, InsightService, UserService } from './services';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TenantService, StoreService, OrderService, CustomerService, InsightServ
       },
     }),
     TypeOrmModule.forFeature([Tenant, Store, Order, OrderItem, Customer, Insight, User]),
+    NotificationsModule,
   ],
   providers: [TenantService, StoreService, OrderService, CustomerService, InsightService, UserService],
   exports: [TenantService, StoreService, OrderService, CustomerService, InsightService, UserService, TypeOrmModule],

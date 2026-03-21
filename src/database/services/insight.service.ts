@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Insight, InsightType, InsightSeverity } from '../entities';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
 
 @Injectable()
 export class InsightService {
   constructor(
     @InjectRepository(Insight)
     private readonly insightRepository: Repository<Insight>,
+    @Optional() private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(
@@ -28,7 +30,15 @@ export class InsightService {
       description,
       data,
     });
-    return this.insightRepository.save(insight);
+    const saved = await this.insightRepository.save(insight);
+    this.notificationsGateway?.emitInsight(tenantId, {
+      id: saved.id,
+      message: saved.message,
+      severity: saved.severity,
+      type: saved.type,
+      createdAt: saved.createdAt,
+    });
+    return saved;
   }
 
   async findById(id: string): Promise<Insight | null> {
