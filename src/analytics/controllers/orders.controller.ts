@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, Res, BadRequestException, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res, BadRequestException, Logger, UseGuards, NotFoundException } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -130,5 +130,24 @@ export class OrdersController {
       this.logger.error(`Error exporting orders: ${message}`);
       res.status(500).json({ success: false, error: message });
     }
+  }
+
+  @Get(':id')
+  async getOrderById(@Param('id') id: string, @Req() req: Request) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    const order = await this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.customer', 'customer')
+      .leftJoinAndSelect('order.store', 'store')
+      .leftJoinAndSelect('order.items', 'items')
+      .where('order.id = :id', { id })
+      .andWhere('order.tenantId = :tenantId', { tenantId })
+      .getOne();
+
+    if (!order) throw new NotFoundException('Order not found');
+
+    return { success: true, data: order };
   }
 }
