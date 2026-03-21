@@ -1,3 +1,41 @@
+# Analitycs E-commerce — Backend
+
+## 🚀 Quickstart
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 15+
+- Redis 7+
+
+### Local development
+```bash
+# 1. Clone and install
+npm install
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your database credentials
+
+# 3. Start services (Docker recommended)
+docker-compose up postgres redis -d
+
+# 4. Run backend
+npx ts-node --files src/main.ts
+```
+
+### Docker (full stack)
+```bash
+docker-compose up --build
+# Frontend: http://localhost:80
+# Backend:  http://localhost:3000
+# API docs: http://localhost:3000/api
+```
+
+### Environment variables
+See `.env.example` for all required variables.
+
+---
+
 # SaaS de Analítica Inteligente para E-commerce
 
 ## 1. Visión del Producto
