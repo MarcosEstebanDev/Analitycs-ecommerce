@@ -8,6 +8,7 @@ export interface AnalyticsMetrics {
   averageOrderValue: number;
   totalCustomers: number;
   repeatCustomers: number;
+  /** Placeholder: total orders in period (real conversion rate requires visitor tracking) */
   conversionRate: number;
   totalProductQty: number;
   period: {
@@ -15,6 +16,8 @@ export interface AnalyticsMetrics {
     endDate: Date;
   };
 }
+
+const MAX_QUERY_ROWS = 50_000;
 
 @Injectable()
 export class AnalyticsService {
@@ -40,7 +43,7 @@ export class AnalyticsService {
       const orders = await this.orderService.findOrdersInDateRange(tenantId, startDate, endDate);
 
       // Get all customers
-      const { data: customers } = await this.customerService.findByTenantId(tenantId, 0, 10000);
+      const { data: customers } = await this.customerService.findByTenantId(tenantId, 0, MAX_QUERY_ROWS);
 
       // Calculate metrics
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount?.toString() || '0'), 0);
@@ -48,7 +51,7 @@ export class AnalyticsService {
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
       const totalCustomers = customers.length;
       const repeatCustomers = customers.filter((c) => c.totalOrders > 1).length;
-      const conversionRate = totalOrders; // Placeholder - would need visitor data
+      const conversionRate = totalOrders; // Placeholder: orders count until visitor tracking is implemented
       const totalProductQty = orders.reduce((sum, order) => {
         return sum + (order.items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0);
       }, 0);
@@ -82,13 +85,13 @@ export class AnalyticsService {
 
     try {
       // Get orders for store in date range
-      const { data: orders } = await this.orderService.findByStoreId(storeId, 0, 10000);
+      const { data: orders } = await this.orderService.findByStoreId(storeId, 0, MAX_QUERY_ROWS);
       const filteredOrders = orders.filter(
         (o) => o.createdAt >= startDate && o.createdAt <= endDate,
       );
 
       // Get customers for store
-      const { data: customers } = await this.customerService.findByStoreId(storeId, 0, 10000);
+      const { data: customers } = await this.customerService.findByStoreId(storeId, 0, MAX_QUERY_ROWS);
 
       const totalRevenue = filteredOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount?.toString() || '0'), 0);
       const totalOrders = filteredOrders.length;
@@ -170,7 +173,7 @@ export class AnalyticsService {
    * Calculate average customer lifetime value
    */
   async calculateAverageLTV(tenantId: string): Promise<number> {
-    const { data: customers } = await this.customerService.findByTenantId(tenantId, 0, 10000);
+    const { data: customers } = await this.customerService.findByTenantId(tenantId, 0, MAX_QUERY_ROWS);
     
     if (customers.length === 0) {
       return 0;

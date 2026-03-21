@@ -1,9 +1,11 @@
-import { Body, Controller, Param, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Param, Post, BadRequestException, UseGuards } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { CreateBillingCustomerDto } from './dto/create-billing-customer.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { TenantPlan } from '../database/entities/tenant.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('billing')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}

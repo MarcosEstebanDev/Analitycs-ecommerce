@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Param, Query, Req, BadRequestException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Req, BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AnalyticsService, AnomalyDetectionService, AlertService } from '../services';
 import { InsightService } from '../../database/services';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   private readonly logger = new Logger(DashboardController.name);
