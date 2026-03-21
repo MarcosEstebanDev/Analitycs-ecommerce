@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Req, BadRequestException, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Req, BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { DataSource } from 'typeorm';
 import { AnalyticsService, AnomalyDetectionService, AlertService } from '../services';
@@ -299,6 +299,31 @@ export class DashboardController {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error actioning insight: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * DELETE /dashboard/connectors/:storeId
+   * Permanently removes a store/connector for the current tenant.
+   */
+  @Delete('connectors/:storeId')
+  async deleteConnector(
+    @Req() req: Request,
+    @Param('storeId') storeId: string,
+  ) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const stores = await this.storeService.findByTenantId(tenantId);
+      const store = stores.find((s) => s.id === storeId);
+      if (!store) throw new BadRequestException('Store not found');
+
+      await this.storeService.delete(storeId);
+      return { success: true, message: `Store ${store.name} deleted` };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
     }
   }
