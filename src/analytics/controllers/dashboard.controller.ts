@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Param, Query, Req, BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AnalyticsService, AnomalyDetectionService, AlertService } from '../services';
-import { InsightService } from '../../database/services';
+import { InsightService, StoreService } from '../../database/services';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -14,7 +14,19 @@ export class DashboardController {
     private readonly anomalyDetectionService: AnomalyDetectionService,
     private readonly alertService: AlertService,
     private readonly insightService: InsightService,
+    private readonly storeService: StoreService,
   ) {}
+
+  /**
+   * Get stores for the current authenticated tenant
+   */
+  @Get('stores')
+  async getStores(@Req() req: Request) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+    const stores = await this.storeService.findByTenantId(tenantId);
+    return { success: true, data: stores };
+  }
 
   /**
    * Get current metrics for the dashboard

@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationModule } from '../notifications/notifications.module';
 import { AnalyticsService, AnomalyDetectionService, AlertService } from './services';
+import { StoreService } from '../database/services';
 import { DashboardController } from './controllers/dashboard.controller';
 
 @Module({
   imports: [DatabaseModule, NotificationModule],
-  providers: [AnalyticsService, AnomalyDetectionService, AlertService],
+  providers: [AnalyticsService, AnomalyDetectionService, AlertService, StoreService],
   exports: [AnalyticsService, AnomalyDetectionService, AlertService],
   controllers: [DashboardController],
 })
