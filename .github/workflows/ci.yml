@@ -2,13 +2,13 @@ name: CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   test-backend:
-    name: Backend — Lint & Build
+    name: Backend — Test & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +17,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm test -- --passWithNoTests
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret
+          JWT_REFRESH_SECRET: test-refresh-secret
       - run: npm run build
       - run: npm run lint --if-present
 

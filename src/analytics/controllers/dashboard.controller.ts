@@ -485,4 +485,52 @@ export class DashboardController {
       return { success: false, error: message };
     }
   }
+
+  /**
+   * GET /dashboard/cohort-retention?months=6
+   * Returns a customer retention cohort matrix.
+   */
+  @Get('cohort-retention')
+  async getCohortRetention(
+    @Req() req: Request,
+    @Query('months') months: string = '6',
+  ) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const monthsNum = Math.min(Math.max(parseInt(months, 10) || 6, 1), 12);
+      const data = await this.analyticsService.calculateCohortRetention(tenantId, monthsNum);
+      return { success: true, data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error calculating cohort retention: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * GET /dashboard/forecast?days=30&history=90
+   * Returns a linear regression revenue forecast.
+   */
+  @Get('forecast')
+  async getForecast(
+    @Req() req: Request,
+    @Query('days') days: string = '30',
+    @Query('history') history: string = '90',
+  ) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    try {
+      const forecastDays = Math.min(Math.max(parseInt(days, 10) || 30, 7), 90);
+      const historyDays = Math.min(Math.max(parseInt(history, 10) || 90, 30), 365);
+      const data = await this.analyticsService.forecastRevenue(tenantId, forecastDays, historyDays);
+      return { success: true, data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error generating forecast: ${message}`);
+      return { success: false, error: message };
+    }
+  }
 }
