@@ -50,6 +50,12 @@ export class UserService {
     return (result.affected ?? 0) > 0;
   }
 
+  async changePassword(id: string, tenantId: string, newPassword: string): Promise<boolean> {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const result = await this.userRepo.update({ id, tenantId }, { passwordHash });
+    return (result.affected ?? 0) > 0;
+  }
+
   async validatePassword(user: User, password: string): Promise<boolean> {
     return bcrypt.compare(password, user.passwordHash);
   }
