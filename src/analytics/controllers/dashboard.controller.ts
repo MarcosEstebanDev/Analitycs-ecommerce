@@ -295,6 +295,7 @@ export class DashboardController {
   @Get('summary')
   async getDashboardSummary(
     @Req() req: Request,
+    @Query('days') days: string = '30',
   ) {
     const tenantId = req.tenantId;
 
@@ -303,11 +304,12 @@ export class DashboardController {
     }
 
     try {
+      const daysNum = Math.min(Math.max(parseInt(days, 10) || 30, 1), 365);
       const now = new Date();
-      const thirtyDaysAgo = new Date(now);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - daysNum);
 
-      const metrics = await this.analyticsService.calculateMetrics(tenantId, thirtyDaysAgo, now);
+      const metrics = await this.analyticsService.calculateMetrics(tenantId, startDate, now);
       const anomalies = await this.anomalyDetectionService.detectAnomalies(tenantId);
       const { data: insights } = await this.insightService.findByTenantId(tenantId, 0, 5, true);
       const criticalAlerts = await this.alertService.getActiveAlerts(tenantId);
