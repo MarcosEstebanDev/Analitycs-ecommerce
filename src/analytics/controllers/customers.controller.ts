@@ -1,8 +1,8 @@
-import { Controller, Get, Query, Req, Res, BadRequestException, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, Res, BadRequestException, Logger, UseGuards, Param, NotFoundException } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Customer } from '../../database/entities';
+import { Customer, Order } from '../../database/entities';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -13,6 +13,8 @@ export class CustomersController {
   constructor(
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {}
 
   private buildQuery(tenantId: string, search?: string, sortBy: string = 'ltv') {
@@ -80,6 +82,43 @@ export class CustomersController {
       this.logger.error(`Error fetching customers: ${message}`);
       return { success: false, error: message };
     }
+  }
+
+  @Get(':id')
+  async getCustomerById(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+
+    const customer = await this.customerRepository.findOne({
+      where: { id, tenantId },
+    });
+
+    if (!customer) throw new NotFoundException(`Customer ${id} not found`);
+
+    const recentOrders = await this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'orderItems')
+      .where('order.tenantId = :tenantId', { tenantId })
+      .andWhere('order.customerId = :customerId', { customerId: id })
+      .orderBy('order.createdAt', 'DESC')
+      .take(10)
+      .getMany();
+
+    const ltv = Number(customer.lifetimeValue);
+    const totalOrders = customer.totalOrders;
+    const aov = ltv / Math.max(totalOrders, 1);
+
+    return {
+      success: true,
+      data: {
+        customer,
+        recentOrders,
+        metrics: { ltv, totalOrders, aov },
+      },
+    };
   }
 
   @Get('export')
