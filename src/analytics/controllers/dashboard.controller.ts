@@ -78,12 +78,14 @@ export class DashboardController {
   }
 
   /**
-   * Get month-over-month growth comparison
+   * Get growth data with configurable granularity: day, week, or month
    */
   @Get('growth')
   async getGrowth(
     @Req() req: Request,
     @Query('months') months: string = '6',
+    @Query('days') days?: string,
+    @Query('granularity') granularity?: string,
   ) {
     const tenantId = req.tenantId;
 
@@ -92,13 +94,20 @@ export class DashboardController {
     }
 
     try {
-      const monthsNum = Math.min(Math.max(parseInt(months, 10) || 6, 1), 24);
-      const growth = await this.analyticsService.calculateMonthlyGrowth(tenantId, monthsNum);
+      const gran = (granularity as 'day' | 'week' | 'month') || 'month';
+      let growth: Array<{ month: string; revenue: number; orders: number }>;
+
+      if (days && (gran === 'day' || gran === 'week')) {
+        const daysNum = Math.min(Math.max(parseInt(days, 10) || 30, 1), 365);
+        growth = await this.analyticsService.calculateGrowthByGranularity(tenantId, daysNum, gran);
+      } else {
+        const monthsNum = Math.min(Math.max(parseInt(months, 10) || 6, 1), 24);
+        growth = await this.analyticsService.calculateMonthlyGrowth(tenantId, monthsNum);
+      }
 
       return {
         success: true,
         data: growth,
-        months: monthsNum,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

@@ -148,6 +148,79 @@ export class AnalyticsService {
   }
 
   /**
+   * Calculate growth with configurable granularity: 'day', 'week', or 'month'.
+   * Uses a single DB query and groups results in-memory to avoid N+1 queries.
+   */
+  async calculateGrowthByGranularity(
+    tenantId: string,
+    days: number,
+    granularity: 'day' | 'week' | 'month',
+  ): Promise<Array<{ month: string; revenue: number; orders: number }>> {
+    const now = new Date();
+    const rangeStart = new Date(now);
+    rangeStart.setDate(rangeStart.getDate() - days);
+    rangeStart.setHours(0, 0, 0, 0);
+
+    // Single query for the whole range
+    const allOrders = await this.orderService.findOrdersInDateRange(tenantId, rangeStart, now);
+
+    if (granularity === 'day') {
+      const buckets = new Map<string, { revenue: number; orders: number }>();
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        buckets.set(key, { revenue: 0, orders: 0 });
+      }
+      for (const order of allOrders) {
+        const d = new Date(order.createdAt);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const bucket = buckets.get(key);
+        if (bucket) {
+          bucket.revenue += parseFloat(order.totalAmount?.toString() || '0');
+          bucket.orders += 1;
+        }
+      }
+      return Array.from(buckets.entries()).map(([key, val]) => {
+        const d = new Date(key + 'T12:00:00');
+        return {
+          month: d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }),
+          revenue: Math.round(val.revenue * 100) / 100,
+          orders: val.orders,
+        };
+      });
+    }
+
+    if (granularity === 'week') {
+      const weeks = Math.ceil(days / 7);
+      return Array.from({ length: weeks }, (_, idx) => {
+        const i = weeks - 1 - idx;
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() - i * 7);
+        weekEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 6);
+        weekStart.setHours(0, 0, 0, 0);
+        if (weekStart < rangeStart) weekStart.setTime(rangeStart.getTime());
+
+        const weekOrders = allOrders.filter((o) => {
+          const d = new Date(o.createdAt);
+          return d >= weekStart && d <= weekEnd;
+        });
+        const revenue = weekOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount?.toString() || '0'), 0);
+        return {
+          month: weekStart.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }),
+          revenue: Math.round(revenue * 100) / 100,
+          orders: weekOrders.length,
+        };
+      });
+    }
+
+    // 'month' fallback
+    return this.calculateMonthlyGrowth(tenantId, Math.ceil(days / 30));
+  }
+
+  /**
    * Get top customers by LTV
    */
   async getTopCustomers(tenantId: string, limit = 10) {
