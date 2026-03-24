@@ -55,6 +55,44 @@ export class BillingService {
     return { tenant: updatedTenant, stripeCustomer: customer };
   }
 
+  async createCheckoutSession(tenantId: string, planId: string): Promise<{ url: string; dryRun?: boolean }> {
+    const tenant = await this.tenantService.findById(tenantId);
+    if (!tenant) throw new BadRequestException('Tenant not found');
+
+    if (!['growth', 'scale'].includes(planId)) {
+      throw new BadRequestException('Invalid plan for checkout');
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
+
+    if (!this.configService.get('STRIPE_SECRET_KEY')) {
+      // Dry-run: redirect back to billing with demo flag
+      return { url: `${frontendUrl}/billing?demo=true&plan=${planId}`, dryRun: true };
+    }
+
+    const priceId = this.configService.get<string>(`STRIPE_PRICE_${planId.toUpperCase()}`);
+    if (!priceId) {
+      throw new BadRequestException(`STRIPE_PRICE_${planId.toUpperCase()} not configured`);
+    }
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${frontendUrl}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/billing`,
+      metadata: { tenantId, targetPlan: planId },
+    };
+
+    if (tenant.stripeCustomerId) {
+      sessionParams.customer = tenant.stripeCustomerId;
+    } else if (tenant.billingEmail) {
+      sessionParams.customer_email = tenant.billingEmail;
+    }
+
+    const session = await this.stripe.checkout.sessions.create(sessionParams);
+    return { url: session.url! };
+  }
+
   async createSubscriptionForTenant(tenantId: string, priceId: string, targetPlan: TenantPlan) {
     const tenant = await this.tenantService.findById(tenantId);
     if (!tenant) {

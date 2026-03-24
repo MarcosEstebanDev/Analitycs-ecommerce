@@ -1,7 +1,9 @@
-import { Body, Controller, Param, Post, BadRequestException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, BadRequestException, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { BillingService } from './billing.service';
 import { CreateBillingCustomerDto } from './dto/create-billing-customer.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { TenantPlan } from '../database/entities/tenant.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -9,6 +11,14 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('billing')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
+
+  @Post('checkout-session')
+  async createCheckoutSession(@Body() body: CreateCheckoutSessionDto, @Req() req: Request) {
+    const tenantId = req.tenantId;
+    if (!tenantId) throw new BadRequestException('Missing tenant context');
+    const result = await this.billingService.createCheckoutSession(tenantId, body.planId);
+    return { success: true, data: result };
+  }
 
   @Post('tenants/:tenantId/customer')
   async createCustomer(
