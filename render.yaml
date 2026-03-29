@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: analitycs-ecommerce-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false          # paste your Neon connection string
+      - key: REDIS_URL
+        sync: false          # paste your Upstash Redis URL (rediss://...)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"           # update to your Vercel URL after frontend deploy
+      - key: DB_SYNC
+        value: "true"        # set to "false" after first successful deploy
