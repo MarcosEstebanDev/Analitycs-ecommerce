@@ -43,16 +43,26 @@ const FIRST_NAMES = ['Lucía', 'Mateo', 'Valentina', 'Santiago', 'Camila', 'Benj
 const LAST_NAMES = ['González', 'Rodríguez', 'Martínez', 'López', 'García', 'Fernández', 'Pérez', 'Sánchez', 'Romero', 'Torres',
   'Díaz', 'Álvarez', 'Ruiz', 'Moreno', 'Jiménez', 'Herrera', 'Castro', 'Vargas', 'Ramos', 'Mendoza'];
 
-const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USER || 'analytics',
-  password: process.env.DB_PASSWORD || 'analytics',
-  database: process.env.DB_NAME || 'analytics',
-  entities: [Tenant, Store, Order, OrderItem, Customer, Insight, User],
-  synchronize: true,
-});
+const databaseUrl = process.env.DATABASE_URL;
+
+const AppDataSource = databaseUrl
+  ? new DataSource({
+      type: 'postgres',
+      url: databaseUrl,
+      ssl: { rejectUnauthorized: false },
+      entities: [Tenant, Store, Order, OrderItem, Customer, Insight, User],
+      synchronize: false,
+    })
+  : new DataSource({
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      username: process.env.DB_USER || 'analytics',
+      password: process.env.DB_PASSWORD || 'analytics',
+      database: process.env.DB_NAME || 'analytics',
+      entities: [Tenant, Store, Order, OrderItem, Customer, Insight, User],
+      synchronize: false,
+    });
 
 async function seed() {
   await AppDataSource.initialize();
