@@ -12,13 +12,27 @@ import { JobsController } from './controllers/jobs.controller';
     ConfigModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        if (redisUrl) {
+          const url = new URL(redisUrl);
+          return {
+            connection: {
+              host: url.hostname,
+              port: Number(url.port) || 6379,
+              password: url.password || undefined,
+              username: url.username || undefined,
+            },
+          };
+        }
+        return {
+          connection: {
+            host: configService.get<string>('REDIS_HOST') ?? 'localhost',
+            port: Number(configService.get<string>('REDIS_PORT') ?? 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     BullModule.registerQueue(
