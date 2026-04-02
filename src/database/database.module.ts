@@ -27,11 +27,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
         return {
           ...shared,
-          host: configService.get('DB_HOST', 'localhost'),
-          port: configService.get('DB_PORT', 5432),
-          username: configService.get('DB_USER', 'analytics_user'),
-          password: configService.get('DB_PASSWORD', 'analytics_password'),
-          database: configService.get('DB_NAME', 'analytics_db'),
+          host: configService.get<string>('DB_HOST') ?? 'localhost',
+          port: Number(configService.get<string>('DB_PORT') ?? 5432),
+          username: configService.get<string>('DB_USER') ?? 'analytics_user',
+          password: configService.get<string>('DB_PASSWORD') ?? 'analytics_password',
+          database: configService.get<string>('DB_NAME') ?? 'analytics_db',
         };
       },
     }),
